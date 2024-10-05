@@ -93,44 +93,46 @@ public class CmdJoin extends FCommand {
             }
 
             if (useRoster) {
-                RosterPlayer rosterPlayer = RosterPlayerManager.getRosterPlayerFromUUID(context.player.getUniqueId(), faction);
-                if (rosterPlayer == null) {
-                    fplayer.msg(TL.COMMAND_JOIN_NOT_IN_ROSTER);
-                    return;
-                }
+                if (!fplayer.isAdminBypassing()) {
+                    RosterPlayer rosterPlayer = RosterPlayerManager.getRosterPlayerFromUUID(context.player.getUniqueId(), faction);
+                    if (rosterPlayer == null) {
+                        fplayer.msg(TL.COMMAND_JOIN_NOT_IN_ROSTER);
+                        return;
+                    }
 
-                if (rosterPlayer.isOnJoinCooldown()) {
-                    fplayer.msg(TL.COMMAND_JOIN_ROSTER_JOIN_COOLDOWN);
-                    return;
-                }
+                    if (rosterPlayer.isOnJoinCooldown()) {
+                        fplayer.msg(TL.COMMAND_JOIN_ROSTER_JOIN_COOLDOWN);
+                        return;
+                    }
 
-                int limit = getFactionMemberLimit(faction);
+                    int limit = getFactionMemberLimit(faction);
 
-                if (faction.getOnlinePlayers().size() == limit) {
-                    fplayer.msg(TL.COMMAND_JOIN_ROSTER_JOIN_NO_ROOM_ONLINE);
-                    return;
-                }
+                    if (faction.getOnlinePlayers().size() == limit) {
+                        fplayer.msg(TL.COMMAND_JOIN_ROSTER_JOIN_NO_ROOM_ONLINE);
+                        return;
+                    }
 
-                if (FactionsPlugin.getInstance().getFileManager().getRoster().fetchBoolean("rotate-offline-players")) {
-                    if (faction.getOnlinePlayers().size() != limit) {
-                        if (faction.getSize() == limit) {
-                            Optional<FPlayer> foundSwap = faction.getFPlayers().stream()
-                                    .filter(fPlayer -> !fPlayer.getPlayer().isOnline())
-                                    .min(Comparator.comparingLong(FPlayer::getLastLogoutTime));
-                            if (foundSwap.isPresent()) {
-                                foundSwap.get().resetFactionData();
-                            } else {
-                                fplayer.msg(TL.COMMAND_JOIN_ROSTER_JOIN_NO_REPLACEMENT_FOUND);
-                                return;
+                    if (FactionsPlugin.getInstance().getFileManager().getRoster().fetchBoolean("rotate-offline-players")) {
+                        if (faction.getOnlinePlayers().size() != limit) {
+                            if (faction.getSize() == limit) {
+                                Optional<FPlayer> foundSwap = faction.getFPlayers().stream()
+                                        .filter(fPlayer -> !fPlayer.getPlayer().isOnline())
+                                        .min(Comparator.comparingLong(FPlayer::getLastLogoutTime));
+                                if (foundSwap.isPresent()) {
+                                    foundSwap.get().resetFactionData();
+                                } else {
+                                    fplayer.msg(TL.COMMAND_JOIN_ROSTER_JOIN_NO_REPLACEMENT_FOUND);
+                                    return;
+                                }
                             }
                         }
+                    } else {
+                        fplayer.msg(TL.COMMAND_JOIN_ROSTER_JOIN_NO_ROOM_FULL);
+                        return;
                     }
-                } else {
-                    fplayer.msg(TL.COMMAND_JOIN_ROSTER_JOIN_NO_ROOM_FULL);
-                    return;
-                }
 
-                rosterPlayer.setLastJoinTime(System.currentTimeMillis());
+                    rosterPlayer.setLastJoinTime(System.currentTimeMillis());
+                }
             }
 
             FactionsPlugin.getInstance().getServer().getScheduler().scheduleSyncDelayedTask(FactionsPlugin.getInstance(), () -> {
@@ -163,7 +165,7 @@ public class CmdJoin extends FCommand {
 
                 faction.deinvite(fplayer);
 
-                if (!useRoster) {
+                if (!useRoster || fplayer.isAdminBypassing()) {
                     context.fPlayer.setRole(faction.getDefaultRole());
                 } else {
                     RosterPlayer rosterPlayer = RosterPlayerManager.getRosterPlayerFromUUID(context.player.getUniqueId(), faction);

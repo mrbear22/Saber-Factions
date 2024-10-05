@@ -52,7 +52,7 @@ public class CmdInventorySee extends FCommand {
         ArrayList<Player> fplayers = context.fPlayer.getFaction().getOnlinePlayers();
 
         FPlayer targetInv = context.argAsFPlayer(0);
-        if (targetInv == null || !fplayers.contains(targetInv.getPlayer())) {
+        if (targetInv.getName() == null || !fplayers.contains(targetInv.getPlayer())) {
             context.msg(TL.PLAYER_NOT_FOUND, Objects.requireNonNull(targetInv.getName()));
             return;
         }
