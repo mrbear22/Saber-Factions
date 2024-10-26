@@ -1,4 +1,4 @@
-use-roster-system: true #Enables and disables functionality of all roster functions
+use-roster-system: false #Enables and disables functionality of all roster functions
 join-faction-cooldown: 5 #The time (in minutes) between a roster player being able to join the faction
 rotate-offline-players: true #Allow rostered players to be rotated out with offline players in the faction
 limit-faction-roster-kicks: true #Limits the amount of kicks a faction can do from their roster
