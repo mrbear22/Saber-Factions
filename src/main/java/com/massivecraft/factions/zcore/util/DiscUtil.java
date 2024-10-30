@@ -1,27 +1,42 @@
 package com.massivecraft.factions.zcore.util;
 
-import com.massivecraft.factions.FactionsPlugin;
-import org.bukkit.Bukkit;
-
-import java.io.IOException;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class DiscUtil {
 
+    // Map to store locks for different files based on filename.
     private static final Map<String, Lock> LOCKS = new ConcurrentHashMap<>();
 
     public static byte[] readBytes(Path path) throws IOException {
-        return Files.readAllBytes(path);
+        // Efficient reading using a buffered stream.
+        try (InputStream inputStream = Files.newInputStream(path);
+             ByteArrayOutputStream buffer = new ByteArrayOutputStream()) {
+
+            byte[] data = new byte[8192]; // 8 KB buffer
+            int bytesRead;
+            while ((bytesRead = inputStream.read(data)) != -1) {
+                buffer.write(data, 0, bytesRead);
+            }
+            return buffer.toByteArray();
+        }
     }
 
     public static void writeBytes(Path path, byte[] bytes) throws IOException {
-        Files.write(path, bytes);
+        // Buffered output to handle large writes efficiently.
+        try (OutputStream outputStream = Files.newOutputStream(path,
+                StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+             BufferedOutputStream bufferedOut = new BufferedOutputStream(outputStream)) {
+
+            bufferedOut.write(bytes);
+        }
     }
 
     public static void write(Path path, String content) throws IOException {
@@ -33,33 +48,40 @@ public class DiscUtil {
     }
 
     public static boolean writeCatch(Path path, final String content, boolean sync) {
+        // Use the filename as the key for the lock.
         String name = path.getFileName().toString();
-        Lock lock = LOCKS.computeIfAbsent(name, n -> new ReentrantReadWriteLock().writeLock());
-
-        Runnable writeTask = () -> {
-            lock.lock();
-            try {
-                write(path, content);
-            } catch (IOException e) {
-                e.printStackTrace();
-            } finally {
-                lock.unlock();
-            }
-        };
+        Lock lock = LOCKS.computeIfAbsent(name, n -> new ReentrantLock());
 
         if (sync) {
-            writeTask.run();
+            synchronizedWrite(path, content, lock);
         } else {
-            Bukkit.getScheduler().runTaskAsynchronously(FactionsPlugin.getInstance(), writeTask);
+            try {
+                // Just execute immediately (no async).
+                synchronizedWrite(path, content, lock);
+            } catch (Exception e) {
+                e.printStackTrace();
+                return false;
+            }
         }
         return true;
+    }
+
+    private static void synchronizedWrite(Path path, String content, Lock lock) {
+        lock.lock();
+        try {
+            write(path, content);
+        } catch (IOException e) {
+            System.err.println("Failed to write to " + path + ": " + e.getMessage());
+        } finally {
+            lock.unlock();
+        }
     }
 
     public static String readCatch(Path path) {
         try {
             return read(path);
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println("Failed to read from " + path + ": " + e.getMessage());
             return null;
         }
     }

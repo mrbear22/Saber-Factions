@@ -10,6 +10,7 @@ import com.massivecraft.factions.cmd.roster.struct.RosterPlayer;
 import com.massivecraft.factions.cmd.roster.struct.RosterPlayerManager;
 import com.massivecraft.factions.struct.Permission;
 import com.massivecraft.factions.struct.Role;
+import com.massivecraft.factions.zcore.file.CustomFile;
 import com.massivecraft.factions.zcore.util.TL;
 
 import java.util.UUID;
@@ -25,7 +26,7 @@ public class CmdRosterAdd extends FCommand {
         this.getAliases().addAll(Aliases.roster_invite);
 
         this.getRequiredArgs().add("player name");
-        this.getRequiredArgs().add("role");
+        this.getOptionalArgs().put("role", "faction role");
 
         this.setRequirements(new CommandRequirements.Builder(Permission.ROSTER)
                 .playerOnly()
@@ -37,6 +38,7 @@ public class CmdRosterAdd extends FCommand {
     @Override
     public void perform(CommandContext context) {
         FPlayer target = context.argAsBestFPlayerMatch(0);
+        CustomFile rosterFile = FactionsPlugin.getInstance().getFileManager().getRoster();
         if (target == null) {
             context.msg(TL.COMMAND_ROSTERADD_NOT_FOUND);
             return;
@@ -53,14 +55,21 @@ public class CmdRosterAdd extends FCommand {
             return;
         }
 
-        Role role = Role.fromString(context.argAsString(1));
-
-        if(role == null) {
-            context.msg(TL.COMMAND_ROSTERADD_INVALIDROLE);
-            return;
+        Role role = null;
+        if(context.args.size() == 2) {
+            role = Role.fromString(context.argAsString(1));
         }
 
-        int limit = FactionsPlugin.getInstance().getFileManager().getRoster().fetchInt("roster-limit");
+        if(role == null) {
+            if(rosterFile.fetchBoolean("use-default-role-for-roster")) {
+                role = Role.fromString(rosterFile.fetchString("default-role-roster-add"));
+            } else {
+                context.msg(TL.COMMAND_ROSTERADD_INVALIDROLE);
+                return;
+            }
+        }
+
+        int limit = rosterFile.fetchInt("roster-limit");
 
         if(context.faction.getRoster().size() + 1 >= limit) {
             context.msg(TL.COMMAND_ROSTERADD_FULL);

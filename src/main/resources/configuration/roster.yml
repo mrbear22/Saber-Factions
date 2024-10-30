@@ -4,3 +4,5 @@ rotate-offline-players: true #Allow rostered players to be rotated out with offl
 limit-faction-roster-kicks: true #Limits the amount of kicks a faction can do from their roster
 max-faction-roster-kicks: 5 #The number of roster kicks before not allowing anymore kicks
 roster-limit: 20 #The maximum number of players that can be present in a roster
+use-default-role-for-roster: true #This means the default role will be selected if a user does /f roster add <name> (Without a role)
+default-role-roster-add: "RECRUIT" #Default role for roster players being added if no role is defined.
